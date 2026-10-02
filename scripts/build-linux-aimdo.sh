@@ -6,6 +6,7 @@ ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 BUILD_DIR="$ROOT_DIR/build"
 CUDA_OUTPUT_PATH="$ROOT_DIR/comfy_aimdo/aimdo.so"
 ROCM_OUTPUT_PATH="$ROOT_DIR/comfy_aimdo/aimdo_rocm.so"
+NPU_OUTPUT_PATH="$ROOT_DIR/comfy_aimdo/aimdo_npu.so"
 FUNCHOOK_VERSION=1.1.3
 FUNCHOOK_SRC="$BUILD_DIR/funchook-$FUNCHOOK_VERSION"
 FUNCHOOK_TARBALL="$BUILD_DIR/funchook-$FUNCHOOK_VERSION.tar.gz"
@@ -90,11 +91,21 @@ else
     FUNCHOOK_LIBS="$FUNCHOOK_LIBS $FUNCHOOK_BUILD_DIR/libdistorm.a"
 fi
 
+# Shared POSIX platform helpers (everything in src-posix EXCEPT the vendor
+# funchook installers, which are mutually exclusive: cuda-funchooks.c for
+# CUDA/HIP, npu-funchooks.c for NPU - each defines aimdo_setup_hooks).
+POSIX_PLAT_SRCS="$ROOT_DIR/src-posix/model-mmap.c \
+$ROOT_DIR/src-posix/module-load.c \
+$ROOT_DIR/src-posix/hostbuf-plat.c \
+$ROOT_DIR/src-posix/thread-plat.c \
+$ROOT_DIR/src-posix/xfer-file-plat.c"
+
 # shellcheck disable=SC2086
 gcc -shared -o "$CUDA_OUTPUT_PATH" -fPIC -O2 -g -pthread \
     -DAIMDO_CUDA \
     ${AIMDO_EXTRA_CFLAGS:-} \
-    "$ROOT_DIR"/src/*.c "$ROOT_DIR"/src-cuda/dispatch.c "$ROOT_DIR"/src-posix/*.c \
+    "$ROOT_DIR"/src/*.c "$ROOT_DIR"/src-cuda/dispatch.c \
+    $POSIX_PLAT_SRCS "$ROOT_DIR"/src-posix/cuda-funchooks.c \
     -I"$ROOT_DIR/src" -I"$FUNCHOOK_SRC/include" \
     $FUNCHOOK_LIBS \
     -ldl
@@ -103,7 +114,21 @@ gcc -shared -o "$CUDA_OUTPUT_PATH" -fPIC -O2 -g -pthread \
 gcc -shared -o "$ROCM_OUTPUT_PATH" -fPIC -O2 -g -pthread \
     -D__HIP_PLATFORM_AMD__ \
     ${AIMDO_EXTRA_CFLAGS:-} \
-    "$ROOT_DIR"/src/*.c "$ROOT_DIR"/src-hip/dispatch.c "$ROOT_DIR"/src-posix/*.c \
+    "$ROOT_DIR"/src/*.c "$ROOT_DIR"/src-hip/dispatch.c \
+    $POSIX_PLAT_SRCS "$ROOT_DIR"/src-posix/cuda-funchooks.c \
     -I"$ROOT_DIR/src" -I"$FUNCHOOK_SRC/include" \
+    $FUNCHOOK_LIBS \
+    -ldl
+
+# ---- Ascend NPU (CANN ACL) backend ------------------------------------------
+# No CANN SDK headers or libraries are needed at build time: the aclrt* entry
+# points are resolved with dlsym from the libascendcl that torch_npu loads.
+# shellcheck disable=SC2086
+gcc -shared -o "$NPU_OUTPUT_PATH" -fPIC -O2 -g -pthread \
+    -DAIMDO_NPU \
+    ${AIMDO_EXTRA_CFLAGS:-} \
+    "$ROOT_DIR"/src/*.c "$ROOT_DIR"/src-npu/dispatch.c "$ROOT_DIR"/src-npu/acl-shim.c \
+    $POSIX_PLAT_SRCS "$ROOT_DIR"/src-posix/npu-funchooks.c \
+    -I"$ROOT_DIR/src" -I"$ROOT_DIR/src-npu" -I"$FUNCHOOK_SRC/include" \
     $FUNCHOOK_LIBS \
     -ldl

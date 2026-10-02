@@ -45,6 +45,13 @@ def detect_vendor():
         return "cuda"
     if '+rocm' in version:
         return "rocm"
+    try:
+        if importlib.util.find_spec("torch_npu") is not None:
+            import torch_npu
+            if torch_npu.npu.is_available():
+                return "npu"
+    except Exception:
+        pass
     return None
 
 
@@ -67,6 +74,7 @@ def init(implementation: str | None = None, simple_vram_headroom: int | None = N
     impl = {
         "cuda": "aimdo",
         "rocm": "aimdo_rocm",
+        "npu": "aimdo_npu",
     }[implementation]
 
     try:
@@ -85,7 +93,7 @@ def init(implementation: str | None = None, simple_vram_headroom: int | None = N
         lib = ctypes.CDLL(str(base_path / f"{impl}.{ext}"), mode=mode)
     except Exception as e:
         logging.info(f"comfy-aimdo failed to load: {e}")
-        logging.info(f"NOTE: comfy-aimdo currently only supports Nvidia and AMD GPUs")
+        logging.info(f"NOTE: comfy-aimdo currently only supports Nvidia, AMD and Ascend NPU devices")
         return False
 
     lib.set_log_callback.argtypes = [_LOG_CALLBACK]
