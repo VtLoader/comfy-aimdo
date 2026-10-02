@@ -30,6 +30,7 @@ typedef void *aclrtDrvMemHandle;
 #define ACL_ERROR_RT_DRV_INTERNAL_ERROR    507899
 #define ACL_MEM_MALLOC_HUGE_FIRST          0
 #define ACL_MEMCPY_HOST_TO_DEVICE          1
+#define ACL_MEMCPY_DEVICE_TO_DEVICE        3
 /* aclrtGetMemInfo accepts ACL_HBM_MEM; allocation granularity queries and
  * aclrtMallocPhysical only accept HUGE(4)/NORMAL(5) on this platform. */
 #define ACL_HBM_MEM                        1
@@ -90,6 +91,10 @@ typedef aclError (*PFN_aclrtGetDevice)(int32_t *deviceId);
 typedef aclError (*PFN_aclrtGetDeviceCount)(uint32_t *count);
 typedef aclError (*PFN_aclrtSetDevice)(int32_t deviceId);
 typedef aclError (*PFN_aclrtSynchronizeDevice)(void);
+typedef aclError (*PFN_aclrtDeviceCanAccessPeer)(int32_t *canAccessPeer, int32_t deviceId,
+                                                 int32_t peerDeviceId);
+typedef aclError (*PFN_aclrtDeviceEnablePeerAccess)(int32_t peerDeviceId, uint32_t flags);
+typedef aclError (*PFN_aclrtDeviceDisablePeerAccess)(int32_t peerDeviceId);
 typedef aclError (*PFN_aclrtCreateEvent)(aclrtEvent *event);
 typedef aclError (*PFN_aclrtRecordEvent)(aclrtEvent event, aclrtStream stream);
 typedef aclError (*PFN_aclrtSynchronizeEvent)(aclrtEvent event);
@@ -138,6 +143,9 @@ typedef struct AimdoAclDispatch {
     /* Appended after the existing layout: external g_acl readers index the
      * halMemAddress* slots by position. */
     PFN_aclrtSetDevice p_aclrtSetDevice;
+    PFN_aclrtDeviceCanAccessPeer p_aclrtDeviceCanAccessPeer;
+    PFN_aclrtDeviceEnablePeerAccess p_aclrtDeviceEnablePeerAccess;
+    PFN_aclrtDeviceDisablePeerAccess p_aclrtDeviceDisablePeerAccess;
 } AimdoAclDispatch;
 
 extern AimdoAclDispatch g_acl;

@@ -4,6 +4,7 @@ import os
 from . import control
 
 lib = control.lib
+_has_peer_cache = False
 
 if os.name == "nt":
     import msvcrt
@@ -46,6 +47,22 @@ if lib is not None:
 
     lib.hostbuf_file_reader_cleanup.argtypes = []
 
+    _has_peer_cache = hasattr(lib, "peer_cache_enabled")
+    if _has_peer_cache:
+        lib.peer_cache_enabled.argtypes = []
+        lib.peer_cache_enabled.restype = ctypes.c_bool
+
+        lib.peer_cache_read_file_to_device.argtypes = [
+            ctypes.c_uint64,  # handle / fd
+            ctypes.c_uint64,  # file_offset
+            ctypes.c_uint64,  # size
+            ctypes.c_void_p,  # cuda stream
+            ctypes.c_uint64,  # device dest ptr
+            ctypes.c_int,     # device
+            ctypes.c_bool,    # mark_cold
+        ]
+        lib.peer_cache_read_file_to_device.restype = ctypes.c_bool
+
     lib.hostbuf_register.argtypes = [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint64]
     lib.hostbuf_register.restype = ctypes.c_bool
 
@@ -65,9 +82,17 @@ def _file_handle(file_obj):
 
 
 def read_file_to_device(file_obj, file_offset, size, stream, device_ptr, device, mark_cold=True):
-    if not lib.hostbuf_file_reader_read(int(device), _file_handle(file_obj),
-                                        int(file_offset), int(size), int(stream) or None,
-                                        int(device_ptr), bool(mark_cold)):
+    device = int(device)
+    handle = _file_handle(file_obj)
+    if _has_peer_cache and lib.peer_cache_enabled():
+        ok = lib.peer_cache_read_file_to_device(handle, int(file_offset), int(size),
+                                                int(stream) or None, int(device_ptr),
+                                                device, bool(mark_cold))
+    else:
+        ok = lib.hostbuf_file_reader_read(device, handle, int(file_offset), int(size),
+                                          int(stream) or None, int(device_ptr),
+                                          bool(mark_cold))
+    if not ok:
         raise RuntimeError("hostbuf_file_reader_read failed")
 
 

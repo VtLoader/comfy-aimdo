@@ -2,6 +2,10 @@
 #include "aimdo-time.h"
 #include "xfer-file.h"
 
+#ifdef AIMDO_NPU
+#include "peer-cache.h"
+#endif
+
 #if !defined(_WIN32) && !defined(_WIN64)
 #define INTEGRATED_RAM_HEADROOM_MIN (2ULL * G)
 #define INTEGRATED_RAM_HEADROOM_MAX (8ULL * G)
@@ -219,6 +223,10 @@ void cleanup(void) {
 
         free(highest_priority_p); /* FIXME: move the model_vbar. */
     }
+
+#ifdef AIMDO_NPU
+    peer_cache_cleanup();
+#endif
 
     free(g_all_devctxs);
     g_all_devctxs = NULL;

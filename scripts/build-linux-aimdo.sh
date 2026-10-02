@@ -128,6 +128,7 @@ gcc -shared -o "$NPU_OUTPUT_PATH" -fPIC -O2 -g -pthread \
     -DAIMDO_NPU \
     ${AIMDO_EXTRA_CFLAGS:-} \
     "$ROOT_DIR"/src/*.c "$ROOT_DIR"/src-npu/dispatch.c "$ROOT_DIR"/src-npu/acl-shim.c \
+    "$ROOT_DIR"/src-npu/peer-cache.c \
     $POSIX_PLAT_SRCS "$ROOT_DIR"/src-posix/npu-funchooks.c \
     -I"$ROOT_DIR/src" -I"$ROOT_DIR/src-npu" -I"$FUNCHOOK_SRC/include" \
     $FUNCHOOK_LIBS \

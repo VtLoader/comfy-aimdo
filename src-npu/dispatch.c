@@ -61,6 +61,9 @@ static const DispatchSymbol optional_symbols[] = {
     { (void **)&g_acl.p_aclrtDeviceGetUuid, "aclrtDeviceGetUuid" },
     { (void **)&g_acl.p_aclrtMallocAlign32, "aclrtMallocAlign32" },
     { (void **)&g_acl.p_aclGetRecentErrMsg, "aclGetRecentErrMsg" },
+    { (void **)&g_acl.p_aclrtDeviceCanAccessPeer, "aclrtDeviceCanAccessPeer" },
+    { (void **)&g_acl.p_aclrtDeviceEnablePeerAccess, "aclrtDeviceEnablePeerAccess" },
+    { (void **)&g_acl.p_aclrtDeviceDisablePeerAccess, "aclrtDeviceDisablePeerAccess" },
 };
 
 static const char *const acl_library_names[] = {
